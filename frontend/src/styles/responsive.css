@@ -1,0 +1,131 @@
+/* ==========================================
+   MOBILE STYLES - ONLY AFFECTS PHONES
+   ========================================== */
+
+/* Desktop Navigation - Always visible on desktop */
+.desktop-nav {
+  display: flex !important;
+  flex-direction: row !important;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Hamburger - Hidden on desktop */
+.hamburger-menu {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 12px;
+}
+
+.hamburger-icon {
+  display: block;
+  width: 24px;
+  height: 3px;
+  background: white;
+  position: relative;
+}
+
+.hamburger-icon::before,
+.hamburger-icon::after {
+  content: '';
+  position: absolute;
+  width: 24px;
+  height: 3px;
+  background: white;
+  left: 0;
+}
+
+.hamburger-icon::before { top: -8px; }
+.hamburger-icon::after { top: 8px; }
+
+/* Mobile Menu - Hidden on desktop */
+.mobile-nav-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.8);
+  z-index: 998;
+}
+
+.mobile-nav-menu {
+  display: none;
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 280px;
+  background: var(--bg-secondary);
+  padding: 24px;
+  z-index: 999;
+  flex-direction: column;
+}
+
+/* ==========================================
+   PHONE ONLY (under 768px)
+   ========================================== */
+@media screen and (max-width: 767px) {
+
+  /* Hide desktop nav on phone */
+  .desktop-nav {
+    display: none !important;
+  }
+
+  /* Show hamburger on phone */
+  .hamburger-menu {
+    display: block !important;
+  }
+
+  /* Show mobile menu when active */
+  .mobile-nav-overlay.active {
+    display: block !important;
+  }
+
+  .mobile-nav-menu.active {
+    display: flex !important;
+  }
+
+  /* Stack page content */
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 12px;
+  }
+
+  /* Full width buttons */
+  .page-header .btn {
+    width: 100%;
+  }
+
+  /* Scrollable tables */
+  .table-wrapper {
+    overflow-x: auto;
+  }
+
+  table {
+    min-width: 600px;
+  }
+
+  /* Smaller text */
+  h1 { font-size: 1.4rem; }
+
+  /* Full width search */
+  .search-container {
+    max-width: 100% !important;
+  }
+
+  /* Stack form buttons */
+  .form-actions {
+    flex-direction: column;
+  }
+
+  .form-actions .btn {
+    width: 100%;
+  }
+
+  /* Hide footer on mobile */
+  .desktop-footer {
+    display: none;
+  }
+}
