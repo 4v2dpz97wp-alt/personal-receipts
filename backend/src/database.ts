@@ -7,6 +7,14 @@ const db = new Database(dbPath);
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
 
+export const INTEREST_KEYS = [
+  'interest_top', 'interest_bottom', 'interest_vers', 'interest_oral', 'interest_making_out',
+  'interest_leather', 'interest_gear', 'interest_cum', 'interest_body_contact', 'interest_passionate',
+  'interest_rough', 'interest_groups', 'interest_threeways',
+  'interest_race_play', 'interest_piggy', 'interest_role_play', 'interest_age_play', 'interest_cum_dump',
+  'interest_younger', 'interest_older', 'interest_hairy', 'interest_smooth', 'interest_muscular', 'interest_jocks',
+];
+
 export function initializeDatabase(): void {
   try {
     db.exec(`
@@ -42,19 +50,6 @@ export function initializeDatabase(): void {
         do_i_want_to_meet INTEGER DEFAULT 0,
         do_they_want_to_meet INTEGER DEFAULT 0,
         meeting_focus TEXT,
-        interest_top INTEGER NOT NULL DEFAULT 0,
-        interest_bottom INTEGER NOT NULL DEFAULT 0,
-        interest_vers INTEGER NOT NULL DEFAULT 0,
-        interest_oral INTEGER NOT NULL DEFAULT 0,
-        interest_making_out INTEGER NOT NULL DEFAULT 0,
-        interest_leather INTEGER NOT NULL DEFAULT 0,
-        interest_gear INTEGER NOT NULL DEFAULT 0,
-        interest_cum INTEGER NOT NULL DEFAULT 0,
-        interest_body_contact INTEGER NOT NULL DEFAULT 0,
-        interest_passionate INTEGER NOT NULL DEFAULT 0,
-        interest_rough INTEGER NOT NULL DEFAULT 0,
-        interest_groups INTEGER NOT NULL DEFAULT 0,
-        interest_threeways INTEGER NOT NULL DEFAULT 0,
         notes TEXT,
         created_at TEXT NOT NULL DEFAULT (datetime('now')),
         updated_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -186,13 +181,13 @@ export function initializeDatabase(): void {
       );
     `);
 
-    // Safe auto-migration for existing databases
+    // Safe auto-migration: adds any missing columns to an existing database
     const safeAddColumn = (columnDef: string) => {
       try {
         db.prepare(`ALTER TABLE contacts ADD COLUMN ${columnDef}`).run();
-        console.log(`✅ Auto-migrated column: ${columnDef.split(' ')[0]}`);
+        console.log(`✅ Added column: ${columnDef.split(' ')[0]}`);
       } catch (e) {
-        // Column already exists
+        // already exists
       }
     };
 
@@ -201,6 +196,8 @@ export function initializeDatabase(): void {
     safeAddColumn("do_i_want_to_meet INTEGER DEFAULT 0");
     safeAddColumn("do_they_want_to_meet INTEGER DEFAULT 0");
     safeAddColumn("meeting_focus TEXT");
+    safeAddColumn("notes TEXT");
+    INTEREST_KEYS.forEach(k => safeAddColumn(`${k} INTEGER NOT NULL DEFAULT 0`));
 
     console.log('✅ Database tables ready');
   } catch (err) {

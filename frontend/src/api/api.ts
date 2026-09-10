@@ -350,3 +350,13 @@ export const deleteCommonResponse = async (id: number) => {
   const { data } = await api.delete(`/common-responses/${id}`);
   return data;
 };
+
+// ===== UNIFIED PHOTO UPLOAD (returns { photos, uploaded }) =====
+export const uploadContactPhotos = async (id: number, files: File[]) => {
+  const fd = new FormData();
+  files.forEach(f => fd.append('photos', f));
+  const { data } = await api.post(`/contacts/${id}/photos`, fd, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return data as { photos: any[]; uploaded: any[] };
+};
