@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import { migrateCommonResponses } from './migrations/commonResponses';
+import { migrateNewInterests } from './migrations/newInterests';
 
 const db = new Database(path.join(__dirname, '..', 'personal_receipts.db'));
 
@@ -157,19 +158,33 @@ export function initializeDatabase(): void {
       key TEXT NOT NULL UNIQUE,
       value TEXT NOT NULL
     );
-    CREATE TABLE IF NOT EXISTS account_emails (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  email_address TEXT NOT NULL,
-  date_activated TEXT NOT NULL DEFAULT (datetime('now')),
-  reset_reminder_date TEXT NOT NULL,
-  date_expired TEXT,
-  is_active INTEGER NOT NULL DEFAULT 1,
-  created_at TEXT NOT NULL DEFAULT (datetime('now'))
-);
-    `);
 
-  migrateCommonResponses();
-  console.log('✅ Database ready');
+    CREATE TABLE IF NOT EXISTS account_emails (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      email_address TEXT NOT NULL,
+      date_activated TEXT NOT NULL DEFAULT (datetime('now')),
+      reset_reminder_date TEXT NOT NULL,
+      date_expired TEXT,
+      is_active INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+  `);
+
+  try {
+    migrateCommonResponses();
+    console.log('✅ commonResponses migration done');
+  } catch (e) {
+    console.error('❌ commonResponses migration failed:', e);
+  }
+
+try {
+  migrateNewInterests();
+  console.log('✅ newInterests migration done');
+} catch (e) {
+  console.error('❌ newInterests migration failed:', e);
+}
+
+console.log('✅ Database ready');
 }
 
 export default db;

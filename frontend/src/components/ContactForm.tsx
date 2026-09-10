@@ -38,6 +38,7 @@ const defaultForm = {
   hang_out_again_explanation: '',
   who_interested_in_meeting: '',
   likelihood_of_meeting: 5,
+  // Original interests
   interest_top: false,
   interest_bottom: false,
   interest_vers: false,
@@ -51,11 +52,24 @@ const defaultForm = {
   interest_rough: false,
   interest_groups: false,
   interest_threeways: false,
+  // New interests
+  interest_race_play: false,
+  interest_piggy: false,
+  interest_role_play: false,
+  interest_age_play: false,
+  interest_cum_dump: false,
+  interest_younger: false,
+  interest_older: false,
+  interest_hairy: false,
+  interest_smooth: false,
+  interest_muscular: false,
+  interest_jocks: false,
   social_apps: [] as any[],
   associations: [] as number[],
 };
 
 const INTERESTS = [
+  // Original
   { key: 'interest_top', label: 'Top' },
   { key: 'interest_bottom', label: 'Bottom' },
   { key: 'interest_vers', label: 'Vers' },
@@ -69,6 +83,18 @@ const INTERESTS = [
   { key: 'interest_rough', label: 'Rough' },
   { key: 'interest_groups', label: 'Groups' },
   { key: 'interest_threeways', label: 'Threeways' },
+  // New
+  { key: 'interest_race_play', label: 'Race Play' },
+  { key: 'interest_piggy', label: 'Piggy' },
+  { key: 'interest_role_play', label: 'Role Play' },
+  { key: 'interest_age_play', label: 'Age Play' },
+  { key: 'interest_cum_dump', label: 'Cum Dump' },
+  { key: 'interest_younger', label: 'Younger' },
+  { key: 'interest_older', label: 'Older' },
+  { key: 'interest_hairy', label: 'Hairy' },
+  { key: 'interest_smooth', label: 'Smooth' },
+  { key: 'interest_muscular', label: 'Muscular' },
+  { key: 'interest_jocks', label: 'Jocks' },
 ];
 
 const ContactForm: React.FC = () => {
@@ -185,6 +211,17 @@ const ContactForm: React.FC = () => {
         interest_rough: c?.interest_rough === 1 || c?.interest_rough === true,
         interest_groups: c?.interest_groups === 1 || c?.interest_groups === true,
         interest_threeways: c?.interest_threeways === 1 || c?.interest_threeways === true,
+        interest_race_play: c?.interest_race_play === 1 || c?.interest_race_play === true,
+        interest_piggy: c?.interest_piggy === 1 || c?.interest_piggy === true,
+        interest_role_play: c?.interest_role_play === 1 || c?.interest_role_play === true,
+        interest_age_play: c?.interest_age_play === 1 || c?.interest_age_play === true,
+        interest_cum_dump: c?.interest_cum_dump === 1 || c?.interest_cum_dump === true,
+        interest_younger: c?.interest_younger === 1 || c?.interest_younger === true,
+        interest_older: c?.interest_older === 1 || c?.interest_older === true,
+        interest_hairy: c?.interest_hairy === 1 || c?.interest_hairy === true,
+        interest_smooth: c?.interest_smooth === 1 || c?.interest_smooth === true,
+        interest_muscular: c?.interest_muscular === 1 || c?.interest_muscular === true,
+        interest_jocks: c?.interest_jocks === 1 || c?.interest_jocks === true,
         social_apps: Array.isArray(c?.social_apps) ? c.social_apps : [],
         associations: Array.isArray(c?.associations)
           ? c.associations.map((a: any) => typeof a === 'number' ? a : a.id).filter(Boolean)
@@ -777,48 +814,55 @@ const ContactForm: React.FC = () => {
                   const selected = form.associations.includes(c.id);
                   return (
                     <label
-                      key={c.id}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 10,
-                        padding: '10px',
-                        borderRadius: 10,
-                        cursor: 'pointer',
-                        background: selected ? 'rgba(99,102,241,0.16)' : 'transparent',
-                        marginBottom: 6,
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selected}
-                        onChange={() => toggleAssociation(c.id)}
-                        style={{ width: 18, height: 18 }}
-                      />
-                    {c.profile_picture ? (
-  <img
-    src={c.profile_picture}
-    alt=""
-    style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover' }}
-  />
-) : (
-  <div style={{
-    width: 28,
-    height: 28,
-    borderRadius: '50%',
-    background: 'rgba(255,255,255,0.08)',
+  key={c.id}
+  style={{
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: '0.75rem',
-    fontWeight: 700,
-    color: '#fff'
-  }}>
-    {c.primary_username?.charAt(0).toUpperCase()}
-  </div>
-)}
-<span style={{ color: '#fff', fontWeight: 700 }}>{c.primary_username}</span>
-                    </label>
+    gap: 12,
+    padding: '10px',
+    borderRadius: 10,
+    cursor: 'pointer',
+    background: selected ? 'rgba(99,102,241,0.16)' : 'transparent',
+    marginBottom: 6,
+    transition: 'all 0.15s ease',
+  }}
+  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.06)'; }}
+  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = selected ? 'rgba(99,102,241,0.16)' : 'transparent'; }}
+>
+  <input type="checkbox" checked={selected} onChange={() => toggleAssociation(c.id)} style={{ width: 18, height: 18 }} />
+  
+  {c.profile_picture ? (
+    <img
+      src={c.profile_picture}
+      alt=""
+      style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, transition: 'transform 0.2s ease' }}
+      onMouseEnter={e => {
+        const img = e.currentTarget as HTMLImageElement;
+        img.style.transform = 'scale(1.25)';
+        img.style.boxShadow = '0 4px 16px rgba(0,0,0,0.5)';
+        img.style.zIndex = '10';
+      }}
+      onMouseLeave={e => {
+        const img = e.currentTarget as HTMLImageElement;
+        img.style.transform = 'scale(1)';
+        img.style.boxShadow = 'none';
+        img.style.zIndex = 'auto';
+      }}
+    />
+  ) : (
+    <div style={{
+      width: 36, height: 36, borderRadius: '50%',
+      background: 'rgba(255,255,255,0.08)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontSize: '0.75rem', fontWeight: 700, color: '#fff',
+      flexShrink: 0,
+    }}>
+      {c.primary_username?.charAt(0).toUpperCase()}
+    </div>
+  )}
+  
+  <span style={{ color: '#fff', fontWeight: 700, fontSize: '0.9rem' }}>{c.primary_username}</span>
+</label>
                   );
                 })}
 

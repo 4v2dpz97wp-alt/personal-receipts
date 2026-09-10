@@ -11,7 +11,11 @@ const Layout: React.FC<Props> = ({ children, onLogout }) => {
   const [menuOpen, setMenuOpen] = useState(false);
 
   const closeMenu = () => setMenuOpen(false);
-  const isActive = (path: string) => location.pathname === path;
+
+  const isActive = (path: string) => {
+    if (path === '/') return location.pathname === '/';
+    return location.pathname === path || location.pathname.startsWith(path + '/');
+  };
 
   const navItems = [
     { path: '/', label: 'Dashboard', icon: '📊' },

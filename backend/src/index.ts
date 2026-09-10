@@ -397,7 +397,7 @@ app.post('/api/restore', authMiddleware, (req, res) => {
       db.prepare('DELETE FROM contacts').run();
 
       for (const c of backup.contacts || []) {
-        db.prepare(`
+               db.prepare(`
           INSERT OR REPLACE INTO contacts (
             id, profile_picture, primary_username, primary_messaging_app,
             flag_avoid, flag_twisted, flag_favorite, flag_hot,
@@ -409,8 +409,12 @@ app.post('/api/restore', authMiddleware, (req, res) => {
             interest_making_out, interest_leather, interest_gear,
             interest_cum, interest_body_contact, interest_passionate,
             interest_rough, interest_groups, interest_threeways,
+            interest_race_play, interest_piggy, interest_role_play,
+            interest_age_play, interest_cum_dump, interest_younger,
+            interest_older, interest_hairy, interest_smooth,
+            interest_muscular, interest_jocks,
             notes, created_at, updated_at
-          ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+          ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         `).run(
           c.id, c.profile_picture, c.primary_username, c.primary_messaging_app,
           c.flag_avoid, c.flag_twisted, c.flag_favorite, c.flag_hot,
@@ -422,6 +426,10 @@ app.post('/api/restore', authMiddleware, (req, res) => {
           c.interest_making_out, c.interest_leather, c.interest_gear,
           c.interest_cum, c.interest_body_contact, c.interest_passionate,
           c.interest_rough, c.interest_groups, c.interest_threeways,
+          c.interest_race_play || 0, c.interest_piggy || 0, c.interest_role_play || 0,
+          c.interest_age_play || 0, c.interest_cum_dump || 0, c.interest_younger || 0,
+          c.interest_older || 0, c.interest_hairy || 0, c.interest_smooth || 0,
+          c.interest_muscular || 0, c.interest_jocks || 0,
           c.notes, c.created_at, c.updated_at
         );
       }

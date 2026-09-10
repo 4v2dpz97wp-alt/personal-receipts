@@ -41,7 +41,7 @@ router.get('/lookup/all', (_req: Request, res: Response) => {
   }
 });
 
-// GET all username histories in bulk (for contacts table search)
+// GET all username histories in bulk
 router.get('/username-histories/all', (_req: Request, res: Response) => {
   try {
     const rows = db.prepare(`
@@ -50,7 +50,6 @@ router.get('/username-histories/all', (_req: Request, res: Response) => {
       ORDER BY archived_at DESC
     `).all() as { contact_id: number; archived_username: string }[];
 
-    // Build a map: { contactId: ['oldname1', 'oldname2'] }
     const map: Record<number, string[]> = {};
     for (const row of rows) {
       if (!map[row.contact_id]) map[row.contact_id] = [];
@@ -180,8 +179,12 @@ router.post('/', (req: Request, res: Response) => {
           interest_top, interest_bottom, interest_vers, interest_oral,
           interest_making_out, interest_leather, interest_gear,
           interest_cum, interest_body_contact, interest_passionate,
-          interest_rough, interest_groups, interest_threeways
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+          interest_rough, interest_groups, interest_threeways,
+          interest_race_play, interest_piggy, interest_role_play,
+          interest_age_play, interest_cum_dump, interest_younger,
+          interest_older, interest_hairy, interest_smooth,
+          interest_muscular, interest_jocks
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
       `).run(
         body.primary_username,
         body.primary_messaging_app || 'Other',
@@ -213,7 +216,18 @@ router.post('/', (req: Request, res: Response) => {
         body.interest_passionate ? 1 : 0,
         body.interest_rough ? 1 : 0,
         body.interest_groups ? 1 : 0,
-        body.interest_threeways ? 1 : 0
+        body.interest_threeways ? 1 : 0,
+        body.interest_race_play ? 1 : 0,
+        body.interest_piggy ? 1 : 0,
+        body.interest_role_play ? 1 : 0,
+        body.interest_age_play ? 1 : 0,
+        body.interest_cum_dump ? 1 : 0,
+        body.interest_younger ? 1 : 0,
+        body.interest_older ? 1 : 0,
+        body.interest_hairy ? 1 : 0,
+        body.interest_smooth ? 1 : 0,
+        body.interest_muscular ? 1 : 0,
+        body.interest_jocks ? 1 : 0
       );
 
       const contactId = result.lastInsertRowid;
@@ -267,6 +281,10 @@ router.put('/:id', (req: Request, res: Response) => {
           interest_making_out=?, interest_leather=?, interest_gear=?,
           interest_cum=?, interest_body_contact=?, interest_passionate=?,
           interest_rough=?, interest_groups=?, interest_threeways=?,
+          interest_race_play=?, interest_piggy=?, interest_role_play=?,
+          interest_age_play=?, interest_cum_dump=?, interest_younger=?,
+          interest_older=?, interest_hairy=?, interest_smooth=?,
+          interest_muscular=?, interest_jocks=?,
           updated_at=datetime('now')
         WHERE id=?
       `).run(
@@ -301,6 +319,17 @@ router.put('/:id', (req: Request, res: Response) => {
         body.interest_rough ? 1 : 0,
         body.interest_groups ? 1 : 0,
         body.interest_threeways ? 1 : 0,
+        body.interest_race_play ? 1 : 0,
+        body.interest_piggy ? 1 : 0,
+        body.interest_role_play ? 1 : 0,
+        body.interest_age_play ? 1 : 0,
+        body.interest_cum_dump ? 1 : 0,
+        body.interest_younger ? 1 : 0,
+        body.interest_older ? 1 : 0,
+        body.interest_hairy ? 1 : 0,
+        body.interest_smooth ? 1 : 0,
+        body.interest_muscular ? 1 : 0,
+        body.interest_jocks ? 1 : 0,
         id
       );
 
