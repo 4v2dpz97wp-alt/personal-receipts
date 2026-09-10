@@ -40,6 +40,63 @@ router.get('/lookup/all', (_req, res) => {
         res.status(500).json({ error: 'Failed to fetch contacts' });
     }
 });
+// GET all username histories in bulk
+router.get('/username-histories/all', (_req, res) => {
+    try {
+        const rows = database_1.default.prepare(`
+      SELECT contact_id, archived_username
+      FROM contact_username_history
+      ORDER BY archived_at DESC
+    `).all();
+        const map = {};
+        for (const row of rows) {
+            if (!map[row.contact_id])
+                map[row.contact_id] = [];
+            map[row.contact_id].push(row.archived_username);
+        }
+        res.json(map);
+    }
+    catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to fetch username histories' });
+    }
+});
+// ARCHIVE current username and set new one
+router.post('/:id/archive-username', (req, res) => {
+    try {
+        const { id } = req.params;
+        const { new_username } = req.body;
+        if (!new_username || !String(new_username).trim()) {
+            return res.status(400).json({ error: 'New username is required' });
+        }
+        const trimmed = String(new_username).trim();
+        const contact = database_1.default.prepare('SELECT * FROM contacts WHERE id = ?').get(id);
+        if (!contact) {
+            return res.status(404).json({ error: 'Contact not found' });
+        }
+        if (contact.primary_username === trimmed) {
+            return res.status(400).json({ error: 'New username must be different from current username' });
+        }
+        const transaction = database_1.default.transaction(() => {
+            database_1.default.prepare(`
+        INSERT INTO contact_username_history (contact_id, archived_username)
+        VALUES (?, ?)
+      `).run(id, contact.primary_username);
+            database_1.default.prepare(`
+        UPDATE contacts
+        SET primary_username = ?, updated_at = datetime('now')
+        WHERE id = ?
+      `).run(trimmed, id);
+        });
+        transaction();
+        const updated = database_1.default.prepare('SELECT * FROM contacts WHERE id = ?').get(id);
+        res.json(updated);
+    }
+    catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to archive username' });
+    }
+});
 // GET single contact
 router.get('/:id', (req, res) => {
     try {
@@ -54,8 +111,21 @@ router.get('/:id', (req, res) => {
       JOIN contacts c ON c.id = ca.associated_contact_id
       WHERE ca.contact_id = ?
     `).all(id);
-        const photos = database_1.default.prepare('SELECT * FROM contact_photos WHERE contact_id = ? ORDER BY uploaded_at DESC').all(id);
-        const directConversations = database_1.default.prepare('SELECT * FROM conversations WHERE primary_contact_id = ? ORDER BY date_time DESC').all(id);
+        const photos = database_1.default.prepare(`
+      SELECT * FROM contact_photos
+      WHERE contact_id = ?
+      ORDER BY uploaded_at DESC
+    `).all(id);
+        const usernameHistory = database_1.default.prepare(`
+      SELECT * FROM contact_username_history
+      WHERE contact_id = ?
+      ORDER BY archived_at DESC
+    `).all(id);
+        const directConversations = database_1.default.prepare(`
+      SELECT * FROM conversations
+      WHERE primary_contact_id = ?
+      ORDER BY date_time DESC
+    `).all(id);
         const indirectConversations = database_1.default.prepare(`
       SELECT conv.* FROM conversations conv
       JOIN conversation_participants cp ON cp.conversation_id = conv.id
@@ -67,6 +137,7 @@ router.get('/:id', (req, res) => {
             social_apps: socialApps,
             associations,
             photos,
+            username_history: usernameHistory,
             direct_conversations: directConversations,
             indirect_conversations: indirectConversations
         });
@@ -91,9 +162,13 @@ router.post('/', (req, res) => {
           interest_top, interest_bottom, interest_vers, interest_oral,
           interest_making_out, interest_leather, interest_gear,
           interest_cum, interest_body_contact, interest_passionate,
-          interest_rough, interest_groups, interest_threeways
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-      `).run(body.primary_username, body.primary_messaging_app || 'Other', body.flag_avoid ? 1 : 0, body.flag_twisted ? 1 : 0, body.flag_favorite ? 1 : 0, body.flag_hot ? 1 : 0, body.real_name || null, body.date_of_birth || null, body.phone_number || null, body.email || null, body.city || null, body.state || null, body.country || null, body.have_we_met ? 1 : 0, body.hang_out_again || null, body.hang_out_again_explanation || null, body.who_interested_in_meeting || null, body.likelihood_of_meeting || 5, body.interest_top ? 1 : 0, body.interest_bottom ? 1 : 0, body.interest_vers ? 1 : 0, body.interest_oral ? 1 : 0, body.interest_making_out ? 1 : 0, body.interest_leather ? 1 : 0, body.interest_gear ? 1 : 0, body.interest_cum ? 1 : 0, body.interest_body_contact ? 1 : 0, body.interest_passionate ? 1 : 0, body.interest_rough ? 1 : 0, body.interest_groups ? 1 : 0, body.interest_threeways ? 1 : 0);
+          interest_rough, interest_groups, interest_threeways,
+          interest_race_play, interest_piggy, interest_role_play,
+          interest_age_play, interest_cum_dump, interest_younger,
+          interest_older, interest_hairy, interest_smooth,
+          interest_muscular, interest_jocks
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+      `).run(body.primary_username, body.primary_messaging_app || 'Other', body.flag_avoid ? 1 : 0, body.flag_twisted ? 1 : 0, body.flag_favorite ? 1 : 0, body.flag_hot ? 1 : 0, body.real_name || null, body.date_of_birth || null, body.phone_number || null, body.email || null, body.city || null, body.state || null, body.country || null, body.have_we_met ? 1 : 0, body.hang_out_again || null, body.hang_out_again_explanation || null, body.who_interested_in_meeting || null, body.likelihood_of_meeting || 5, body.interest_top ? 1 : 0, body.interest_bottom ? 1 : 0, body.interest_vers ? 1 : 0, body.interest_oral ? 1 : 0, body.interest_making_out ? 1 : 0, body.interest_leather ? 1 : 0, body.interest_gear ? 1 : 0, body.interest_cum ? 1 : 0, body.interest_body_contact ? 1 : 0, body.interest_passionate ? 1 : 0, body.interest_rough ? 1 : 0, body.interest_groups ? 1 : 0, body.interest_threeways ? 1 : 0, body.interest_race_play ? 1 : 0, body.interest_piggy ? 1 : 0, body.interest_role_play ? 1 : 0, body.interest_age_play ? 1 : 0, body.interest_cum_dump ? 1 : 0, body.interest_younger ? 1 : 0, body.interest_older ? 1 : 0, body.interest_hairy ? 1 : 0, body.interest_smooth ? 1 : 0, body.interest_muscular ? 1 : 0, body.interest_jocks ? 1 : 0);
             const contactId = result.lastInsertRowid;
             if (body.social_apps?.length) {
                 const insertApp = database_1.default.prepare('INSERT INTO contact_social_apps (contact_id, app_name, username) VALUES (?,?,?)');
@@ -137,9 +212,13 @@ router.put('/:id', (req, res) => {
           interest_making_out=?, interest_leather=?, interest_gear=?,
           interest_cum=?, interest_body_contact=?, interest_passionate=?,
           interest_rough=?, interest_groups=?, interest_threeways=?,
+          interest_race_play=?, interest_piggy=?, interest_role_play=?,
+          interest_age_play=?, interest_cum_dump=?, interest_younger=?,
+          interest_older=?, interest_hairy=?, interest_smooth=?,
+          interest_muscular=?, interest_jocks=?,
           updated_at=datetime('now')
         WHERE id=?
-      `).run(body.primary_username, body.primary_messaging_app || 'Other', body.flag_avoid ? 1 : 0, body.flag_twisted ? 1 : 0, body.flag_favorite ? 1 : 0, body.flag_hot ? 1 : 0, body.real_name || null, body.date_of_birth || null, body.phone_number || null, body.email || null, body.city || null, body.state || null, body.country || null, body.have_we_met ? 1 : 0, body.hang_out_again || null, body.hang_out_again_explanation || null, body.who_interested_in_meeting || null, body.likelihood_of_meeting || 5, body.interest_top ? 1 : 0, body.interest_bottom ? 1 : 0, body.interest_vers ? 1 : 0, body.interest_oral ? 1 : 0, body.interest_making_out ? 1 : 0, body.interest_leather ? 1 : 0, body.interest_gear ? 1 : 0, body.interest_cum ? 1 : 0, body.interest_body_contact ? 1 : 0, body.interest_passionate ? 1 : 0, body.interest_rough ? 1 : 0, body.interest_groups ? 1 : 0, body.interest_threeways ? 1 : 0, id);
+      `).run(body.primary_username, body.primary_messaging_app || 'Other', body.flag_avoid ? 1 : 0, body.flag_twisted ? 1 : 0, body.flag_favorite ? 1 : 0, body.flag_hot ? 1 : 0, body.real_name || null, body.date_of_birth || null, body.phone_number || null, body.email || null, body.city || null, body.state || null, body.country || null, body.have_we_met ? 1 : 0, body.hang_out_again || null, body.hang_out_again_explanation || null, body.who_interested_in_meeting || null, body.likelihood_of_meeting || 5, body.interest_top ? 1 : 0, body.interest_bottom ? 1 : 0, body.interest_vers ? 1 : 0, body.interest_oral ? 1 : 0, body.interest_making_out ? 1 : 0, body.interest_leather ? 1 : 0, body.interest_gear ? 1 : 0, body.interest_cum ? 1 : 0, body.interest_body_contact ? 1 : 0, body.interest_passionate ? 1 : 0, body.interest_rough ? 1 : 0, body.interest_groups ? 1 : 0, body.interest_threeways ? 1 : 0, body.interest_race_play ? 1 : 0, body.interest_piggy ? 1 : 0, body.interest_role_play ? 1 : 0, body.interest_age_play ? 1 : 0, body.interest_cum_dump ? 1 : 0, body.interest_younger ? 1 : 0, body.interest_older ? 1 : 0, body.interest_hairy ? 1 : 0, body.interest_smooth ? 1 : 0, body.interest_muscular ? 1 : 0, body.interest_jocks ? 1 : 0, id);
             if (body.social_apps) {
                 database_1.default.prepare('DELETE FROM contact_social_apps WHERE contact_id = ?').run(id);
                 const insertApp = database_1.default.prepare('INSERT INTO contact_social_apps (contact_id, app_name, username) VALUES (?,?,?)');
@@ -183,8 +262,11 @@ router.post('/:id/profile-picture', (req, res) => {
         if (!req.file)
             return res.status(400).json({ error: 'No file uploaded' });
         const filePath = `/uploads/profile-pictures/${req.file.filename}`;
-        database_1.default.prepare("UPDATE contacts SET profile_picture = ?, updated_at = datetime('now') WHERE id = ?")
-            .run(filePath, req.params.id);
+        database_1.default.prepare(`
+      UPDATE contacts
+      SET profile_picture = ?, updated_at = datetime('now')
+      WHERE id = ?
+    `).run(filePath, req.params.id);
         res.json({ profile_picture: filePath });
     });
 });

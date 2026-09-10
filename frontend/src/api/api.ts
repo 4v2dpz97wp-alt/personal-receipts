@@ -86,6 +86,15 @@ export const archivePrimaryUsername = async (id: number, new_username: string) =
   return data;
 };
 
+export const getAllUsernameHistories = async () => {
+  try {
+    const { data } = await api.get('/contacts/username-history/all');
+    return data;
+  } catch {
+    return [];
+  }
+};
+
 export const uploadProfilePicture = async (id: number, file: File) => {
   const fd = new FormData();
   fd.append('profile_picture', file);
@@ -108,13 +117,13 @@ export const uploadAdditionalPhotos = async (id: number, files: File[]) => {
   return data.photos;
 };
 
-export const deletePhoto = async (cid: number, pid: number) => {
-  await api.delete(`/contacts/${cid}/photos/${pid}`);
+export const setProfilePicture = async (id: number, photoPath: string) => {
+  const { data } = await api.post(`/contacts/${id}/set-profile-picture`, { photo_path: photoPath });
+  return data;
 };
 
-export const getAllUsernameHistories = async (): Promise<Record<number, string[]>> => {
-  const { data } = await api.get('/contacts/username-histories/all');
-  return data;
+export const deletePhoto = async (cid: number, pid: number) => {
+  await api.delete(`/contacts/${cid}/photos/${pid}`);
 };
 
 // ===== CONVERSATIONS =====
@@ -253,6 +262,7 @@ export const deleteReminder = async (id: number) => {
   const { data } = await api.delete(`/reminders/${id}`);
   return data;
 };
+
 // ===== ACCOUNT EMAILS =====
 export const getActiveEmail = async () => {
   const { data } = await api.get('/account-emails/active');
@@ -273,6 +283,7 @@ export const checkEmailReminderDue = async () => {
   const { data } = await api.get('/account-emails/reminder-due');
   return data;
 };
+
 // ===== COMMON RESPONSES =====
 export const getCommonResponses = async (params?: {
   search?: string;

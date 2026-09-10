@@ -1,14 +1,36 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Personal Receipts</title>
+
+    <script>
+      if (typeof window !== 'undefined') {
+        if (window.requestIdleCallback) {
+          window.requestIdleCallback = window.requestIdleCallback.bind(window);
+        } else {
+          window.requestIdleCallback = function (cb) {
+            var start = Date.now();
+            return setTimeout(function () {
+              cb({
+                didTimeout: false,
+                timeRemaining: function () {
+                  return Math.max(0, 50 - (Date.now() - start));
+                },
+              });
+            }, 1);
+          };
+        }
+        if (window.cancelIdleCallback) {
+          window.cancelIdleCallback = window.cancelIdleCallback.bind(window);
+        } else {
+          window.cancelIdleCallback = function (id) {
+            clearTimeout(id);
+          };
+        }
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
