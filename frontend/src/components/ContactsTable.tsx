@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { getContacts, deleteContact, getTags, getContactTags, getAllUsernameHistories } from '../api/api';
 
 type ViewMode = 'table' | 'cards' | 'gallery';
@@ -75,13 +76,45 @@ const PhotoHover: React.FC<{ src: string; children: React.ReactNode }> = ({ src,
   };
 
   return (
-    <div ref={ref} style={{ display: 'inline-flex', flexShrink: 0 }} onMouseEnter={handleEnter} onMouseLeave={() => setShow(false)}>
+    <div
+      ref={ref}
+      style={{ display: 'inline-flex', flexShrink: 0, cursor: 'pointer' }}
+      onMouseEnter={handleEnter}
+      onMouseLeave={() => setShow(false)}
+    >
       {children}
-      {show && ReactDOM.createPortal(
-        <div onClick={e => e.stopPropagation()} onMouseDown={e => e.stopPropagation()} style={{ position: 'fixed', top: coords.top, left: coords.left, zIndex: 99999, padding: 5, background: 'var(--card-bg, #1a1a2e)', borderRadius: 14, border: '1px solid rgba(255,255,255,0.15)', boxShadow: '0 16px 48px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.08)', animation: 'photoHoverIn 0.15s ease-out', pointerEvents: 'none' }}>
-          <img src={src} alt="" style={{ width: 220, height: 220, objectFit: 'cover', borderRadius: 11, display: 'block' }} />
-        </div>, document.body
-      )}
+      {show &&
+        ReactDOM.createPortal(
+          <AnimatePresence>
+            <motion.div
+              initial={{ scale: 0.5, opacity: 0 }}
+              animate={{ scale: 1.1, opacity: 1 }}
+              exit={{ scale: 0.5, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+              onClick={e => e.stopPropagation()}
+              onMouseDown={e => e.stopPropagation()}
+              style={{
+                position: 'fixed',
+                top: coords.top,
+                left: coords.left,
+                zIndex: 99999,
+                padding: 6,
+                background: 'var(--card-bg, #1a1a2e)',
+                borderRadius: 14,
+                border: '1px solid rgba(255,255,255,0.2)',
+                boxShadow: '0 20px 50px rgba(0,0,0,0.8), 0 0 20px rgba(255,255,255,0.1)',
+                pointerEvents: 'none',
+              }}
+            >
+              <img
+                src={src}
+                alt=""
+                style={{ width: 220, height: 220, objectFit: 'cover', borderRadius: 11, display: 'block' }}
+              />
+            </motion.div>
+          </AnimatePresence>,
+          document.body
+        )}
     </div>
   );
 };
@@ -107,7 +140,9 @@ const ContactsTable: React.FC = () => {
     return 'cards';
   });
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+  }, []);
 
   const load = async () => {
     setLoading(true);
@@ -135,7 +170,9 @@ const ContactsTable: React.FC = () => {
           })
         );
         const map: Record<number, number[]> = {};
-        tagMaps.forEach(m => { map[m.id] = m.ids; });
+        tagMaps.forEach(m => {
+          map[m.id] = m.ids;
+        });
         setContactTagIdsById(map);
       } catch (tagErr) {
         console.warn('Could not load tags:', tagErr);
@@ -162,12 +199,13 @@ const ContactsTable: React.FC = () => {
       const realName = (c.real_name || '').toLowerCase();
       let matchesSearch = username.includes(term) || realName.includes(term);
       if (!matchesSearch && term.length > 0) {
-        const history = usernameHistoryById[c.id] || [];
-        matchesSearch = history.some(h => (h || '').toLowerCase().includes(term));
+        const history = usernameHistoryById[c.id];
+        matchesSearch = Array.isArray(history) && history.some(h => (h || '').toLowerCase().includes(term));
       }
       const locationText = `${c.city || ''} ${c.state || ''} ${c.country || ''}`.toLowerCase();
       const matchesCity = cityTerm.length === 0 || locationText.includes(cityTerm);
-      const matchesInterests = selectedInterestKeys.length === 0 || selectedInterestKeys.some(k => c[k] === 1 || c[k] === true);
+      const matchesInterests =
+        selectedInterestKeys.length === 0 || selectedInterestKeys.some(k => c[k] === 1 || c[k] === true);
       const contactTagIds = contactTagIdsById[c.id] || [];
       const matchesTags = selectedTagIds.length === 0 || selectedTagIds.some(tid => contactTagIds.includes(tid));
       return matchesSearch && matchesCity && matchesInterests && matchesTags;
@@ -190,14 +228,19 @@ const ContactsTable: React.FC = () => {
     return result;
   }, [filtered, sortMode]);
 
-  const getMatchedHistory = useCallback((c: any): string | null => {
-    const term = search.trim().toLowerCase();
-    if (!term) return null;
-    const currentHit = (c.primary_username || '').toLowerCase().includes(term) || (c.real_name || '').toLowerCase().includes(term);
-    if (currentHit) return null;
-    const history = usernameHistoryById[c.id] || [];
-    return history.find(h => (h || '').toLowerCase().includes(term)) || null;
-  }, [search, usernameHistoryById]);
+  const getMatchedHistory = useCallback(
+    (c: any): string | null => {
+      const term = search.trim().toLowerCase();
+      if (!term) return null;
+      const currentHit =
+        (c.primary_username || '').toLowerCase().includes(term) || (c.real_name || '').toLowerCase().includes(term);
+      if (currentHit) return null;
+      const history = usernameHistoryById[c.id];
+      if (!Array.isArray(history)) return null;
+      return history.find(h => (h || '').toLowerCase().includes(term)) || null;
+    },
+    [search, usernameHistoryById]
+  );
 
   const filteredTags = useMemo(() => {
     const t = tagSearch.trim().toLowerCase();
@@ -207,7 +250,8 @@ const ContactsTable: React.FC = () => {
   const activeFilterCount = (cityFilter.trim() ? 1 : 0) + selectedInterestKeys.length + selectedTagIds.length;
 
   const handleDelete = async (e: React.MouseEvent, id: number, name: string) => {
-    e.stopPropagation(); e.preventDefault();
+    e.stopPropagation();
+    e.preventDefault();
     if (window.confirm(`Delete "${name}"?`)) {
       await deleteContact(id);
       setContacts(prev => prev.filter(c => c.id !== id));
@@ -215,7 +259,10 @@ const ContactsTable: React.FC = () => {
   };
 
   const goToContact = (id: number) => navigate(`/contacts/${id}`);
-  const changeView = (mode: ViewMode) => { setViewMode(mode); localStorage.setItem('pr_contacts_view', mode); };
+  const changeView = (mode: ViewMode) => {
+    setViewMode(mode);
+    localStorage.setItem('pr_contacts_view', mode);
+  };
   const initials = (name?: string) => name?.charAt(0)?.toUpperCase() || '?';
 
   if (loading) return <div style={{ textAlign: 'center', padding: 60, color: 'var(--text-muted)' }}>Loading...</div>;
@@ -261,7 +308,11 @@ const ContactsTable: React.FC = () => {
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               {INTEREST_FILTERS.map(i => {
                 const active = selectedInterestKeys.includes(i.key);
-                return <button key={i.key} type="button" onClick={() => setSelectedInterestKeys(prev => prev.includes(i.key) ? prev.filter(x => x !== i.key) : [...prev, i.key])} style={{ padding: '4px 10px', borderRadius: 16, border: active ? '1px solid var(--primary)' : '1px solid rgba(255,255,255,0.15)', background: active ? 'rgba(99,102,241,0.2)' : 'transparent', color: active ? 'var(--primary-light)' : 'var(--text-muted)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}>{i.label}</button>;
+                return (
+                  <button key={i.key} type="button" onClick={() => setSelectedInterestKeys(prev => (prev.includes(i.key) ? prev.filter(x => x !== i.key) : [...prev, i.key]))} style={{ padding: '4px 10px', borderRadius: 16, border: active ? '1px solid var(--primary)' : '1px solid rgba(255,255,255,0.15)', background: active ? 'rgba(99,102,241,0.2)' : 'transparent', color: active ? 'var(--primary-light)' : 'var(--text-muted)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}>
+                    {i.label}
+                  </button>
+                );
               })}
             </div>
           </div>
@@ -272,12 +323,20 @@ const ContactsTable: React.FC = () => {
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, maxHeight: 120, overflowY: 'auto' }}>
                 {filteredTags.map((t: any) => {
                   const active = selectedTagIds.includes(t.id);
-                  return <button key={t.id} type="button" onClick={() => setSelectedTagIds(prev => prev.includes(t.id) ? prev.filter(x => x !== t.id) : [...prev, t.id])} style={{ padding: '4px 10px', borderRadius: 16, border: active ? '1px solid var(--primary)' : '1px solid rgba(255,255,255,0.15)', background: active ? 'rgba(99,102,241,0.2)' : 'transparent', color: active ? 'var(--primary-light)' : 'var(--text-muted)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}>{t.name}</button>;
+                  return (
+                    <button key={t.id} type="button" onClick={() => setSelectedTagIds(prev => (prev.includes(t.id) ? prev.filter(x => x !== t.id) : [...prev, t.id]))} style={{ padding: '4px 10px', borderRadius: 16, border: active ? '1px solid var(--primary)' : '1px solid rgba(255,255,255,0.15)', background: active ? 'rgba(99,102,241,0.2)' : 'transparent', color: active ? 'var(--primary-light)' : 'var(--text-muted)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}>
+                      {t.name}
+                    </button>
+                  );
                 })}
               </div>
             </div>
           )}
-          {activeFilterCount > 0 && <button type="button" onClick={() => { setCityFilter(''); setSelectedInterestKeys([]); setSelectedTagIds([]); setTagSearch(''); }} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, alignSelf: 'flex-start' }}>✕ Clear All Filters</button>}
+          {activeFilterCount > 0 && (
+            <button type="button" onClick={() => { setCityFilter(''); setSelectedInterestKeys([]); setSelectedTagIds([]); setTagSearch(''); }} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, alignSelf: 'flex-start' }}>
+              ✕ Clear All Filters
+            </button>
+          )}
         </div>
       </details>
 
@@ -294,12 +353,51 @@ const ContactsTable: React.FC = () => {
             const isAvoid = c.flag_avoid === 1;
             const historyHit = getMatchedHistory(c);
             return (
-              <div key={c.id} className="card" onClick={() => goToContact(c.id)} role="button" tabIndex={0} onKeyDown={e => { if (e.key === 'Enter') goToContact(c.id); }} style={{ padding: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', color: 'inherit', position: 'relative', transition: 'transform 0.15s ease', cursor: 'pointer', border: isAvoid ? AVOID.cardBorder : undefined, background: isAvoid ? AVOID.cardBg : undefined, boxShadow: isAvoid ? AVOID.cardShadow : undefined, animation: isAvoid ? AVOID.cardAnimation : undefined }} onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-4px)'; }} onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'; }}>
+              <motion.div
+                key={c.id}
+                className="card"
+                initial={{ opacity: 0, scale: 0.85 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true, margin: '-20px' }}
+                whileHover={{ scale: 1.05 }}
+                transition={{ duration: 0.25 }}
+                onClick={() => goToContact(c.id)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={e => { if (e.key === 'Enter') goToContact(c.id); }}
+                style={{
+                  padding: 16,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  color: 'inherit',
+                  position: 'relative',
+                  cursor: 'pointer',
+                  border: isAvoid ? AVOID.cardBorder : undefined,
+                  background: isAvoid ? AVOID.cardBg : undefined,
+                  boxShadow: isAvoid ? AVOID.cardShadow : undefined,
+                  animation: isAvoid ? AVOID.cardAnimation : undefined,
+                }}
+              >
                 {isAvoid && <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 4, background: AVOID.stripe, boxShadow: AVOID.stripeShadow, pointerEvents: 'none' }} />}
                 {c.profile_picture ? (
-                  <PhotoHover src={c.profile_picture}><img src={c.profile_picture} alt="" style={{ width: 140, height: 140, objectFit: 'cover', borderRadius: '50%', border: isAvoid ? AVOID.galleryBorder : '3px solid rgba(255,255,255,0.1)', boxShadow: isAvoid ? AVOID.galleryShadow : '0 4px 16px rgba(0,0,0,0.3)', marginTop: isAvoid ? 8 : 0 }} /></PhotoHover>
-                ) : (<div className="avatar-placeholder" style={{ width: 140, height: 140, fontSize: '2.8rem', borderRadius: '50%', marginTop: isAvoid ? 8 : 0, boxShadow: isAvoid ? AVOID.avatarRing : undefined }}>{initials(c.primary_username)}</div>)}
-                <div style={{ marginTop: 14, fontWeight: 900, fontSize: '1rem', textAlign: 'center', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: isAvoid ? AVOID.username : undefined, textShadow: isAvoid ? AVOID.usernameShadow : undefined }}>{c.primary_username}</div>
+                  <PhotoHover src={c.profile_picture}>
+                    <motion.img
+                      whileHover={{ scale: 1.1 }}
+                      transition={{ type: 'spring', stiffness: 300 }}
+                      src={c.profile_picture}
+                      alt=""
+                      style={{ width: 140, height: 140, objectFit: 'cover', borderRadius: '50%', border: isAvoid ? AVOID.galleryBorder : '3px solid rgba(255,255,255,0.1)', boxShadow: isAvoid ? AVOID.galleryShadow : '0 4px 16px rgba(0,0,0,0.3)', marginTop: isAvoid ? 8 : 0 }}
+                    />
+                  </PhotoHover>
+                ) : (
+                  <div className="avatar-placeholder" style={{ width: 140, height: 140, fontSize: '2.8rem', borderRadius: '50%', marginTop: isAvoid ? 8 : 0, boxShadow: isAvoid ? AVOID.avatarRing : undefined }}>
+                    {initials(c.primary_username)}
+                  </div>
+                )}
+                <div style={{ marginTop: 14, fontWeight: 900, fontSize: '1rem', textAlign: 'center', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: isAvoid ? AVOID.username : undefined, textShadow: isAvoid ? AVOID.usernameShadow : undefined }}>
+                  {c.primary_username}
+                </div>
                 {isAvoid && <div style={{ marginTop: 6, fontSize: '0.72rem', fontWeight: 900, letterSpacing: '0.5px', color: '#ff004c', textShadow: '0 0 10px rgba(255,0,80,0.9)', textTransform: 'uppercase' }}>🚫 AVOID</div>}
                 {historyHit && <div style={{ marginTop: 4, fontSize: '0.72rem', color: 'var(--accent)', fontStyle: 'italic', opacity: 0.85 }}>formerly {historyHit}</div>}
                 <div style={{ display: 'flex', gap: 4, marginTop: 8, flexWrap: 'wrap', justifyContent: 'center', minHeight: 22 }}>
@@ -307,7 +405,7 @@ const ContactsTable: React.FC = () => {
                   {c.flag_hot === 1 && <span style={{ fontSize: '0.9rem' }}>🔥</span>}
                   {c.flag_twisted === 1 && <span style={{ fontSize: '0.9rem' }}>🌀</span>}
                 </div>
-              </div>
+              </motion.div>
             );
           })}
         </div>
@@ -317,12 +415,41 @@ const ContactsTable: React.FC = () => {
             const isAvoid = c.flag_avoid === 1;
             const historyHit = getMatchedHistory(c);
             return (
-              <div key={c.id} className="card" style={{ padding: 18, position: 'relative', border: isAvoid ? AVOID.cardBorder : undefined, background: isAvoid ? AVOID.cardBg : undefined, boxShadow: isAvoid ? AVOID.cardShadow : undefined, animation: isAvoid ? AVOID.cardAnimation : undefined }}>
+              <motion.div
+                key={c.id}
+                className="card"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-20px' }}
+                whileHover={{ y: -4, scale: 1.02 }}
+                transition={{ duration: 0.25 }}
+                style={{
+                  padding: 18,
+                  position: 'relative',
+                  border: isAvoid ? AVOID.cardBorder : undefined,
+                  background: isAvoid ? AVOID.cardBg : undefined,
+                  boxShadow: isAvoid ? AVOID.cardShadow : undefined,
+                  animation: isAvoid ? AVOID.cardAnimation : undefined,
+                }}
+              >
                 {isAvoid && <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 5, background: AVOID.stripe, boxShadow: AVOID.stripeShadow, pointerEvents: 'none' }} />}
                 <div onClick={() => goToContact(c.id)} role="button" tabIndex={0} onKeyDown={e => { if (e.key === 'Enter') goToContact(c.id); }} style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 14, marginTop: isAvoid ? 6 : 0, cursor: 'pointer' }}>
                   {c.profile_picture ? (
-                    <PhotoHover src={c.profile_picture}><img src={c.profile_picture} alt="" className="avatar" style={{ width: 62, height: 62, objectFit: 'cover', borderRadius: '50%', flexShrink: 0, boxShadow: isAvoid ? AVOID.avatarRing : undefined }} /></PhotoHover>
-                  ) : (<div className="avatar-placeholder" style={{ width: 62, height: 62, fontSize: '1.4rem', flexShrink: 0, boxShadow: isAvoid ? AVOID.avatarRing : undefined }}>{initials(c.primary_username)}</div>)}
+                    <PhotoHover src={c.profile_picture}>
+                      <motion.img
+                        whileHover={{ scale: 1.15 }}
+                        transition={{ type: 'spring', stiffness: 300 }}
+                        src={c.profile_picture}
+                        alt=""
+                        className="avatar"
+                        style={{ width: 62, height: 62, objectFit: 'cover', borderRadius: '50%', flexShrink: 0, boxShadow: isAvoid ? AVOID.avatarRing : undefined }}
+                      />
+                    </PhotoHover>
+                  ) : (
+                    <div className="avatar-placeholder" style={{ width: 62, height: 62, fontSize: '1.4rem', flexShrink: 0, boxShadow: isAvoid ? AVOID.avatarRing : undefined }}>
+                      {initials(c.primary_username)}
+                    </div>
+                  )}
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontWeight: 900, fontSize: '1.05rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: isAvoid ? AVOID.username : undefined, textShadow: isAvoid ? AVOID.usernameShadow : undefined }}>{c.primary_username}</div>
                     {historyHit && <div style={{ fontSize: '0.72rem', color: 'var(--accent)', fontStyle: 'italic', opacity: 0.85 }}>formerly {historyHit}</div>}
@@ -346,14 +473,18 @@ const ContactsTable: React.FC = () => {
                   <button type="button" onClick={e => { e.stopPropagation(); navigate(`/contacts/${c.id}/edit`); }} className="btn btn-primary" style={{ padding: '8px 12px', justifyContent: 'center' }}>✏️ Edit</button>
                   <button type="button" onClick={e => handleDelete(e, c.id, c.primary_username)} className="btn btn-danger" style={{ padding: '8px 12px' }}>🗑️ Delete</button>
                 </div>
-              </div>
+              </motion.div>
             );
           })}
         </div>
       ) : (
         <div className="card">
           <table>
-            <thead><tr><th>Contact</th><th>App</th><th>Location</th><th>Flags</th><th>Met?</th><th>Actions</th></tr></thead>
+            <thead>
+              <tr>
+                <th>Contact</th><th>App</th><th>Location</th><th>Flags</th><th>Met?</th><th>Actions</th>
+              </tr>
+            </thead>
             <tbody>
               {sortedFiltered.map(c => {
                 const isAvoid = c.flag_avoid === 1;
@@ -363,8 +494,20 @@ const ContactsTable: React.FC = () => {
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         {c.profile_picture ? (
-                          <PhotoHover src={c.profile_picture}><img src={c.profile_picture} alt="" className="avatar" style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: '50%', boxShadow: isAvoid ? AVOID.avatarRing : undefined }} /></PhotoHover>
-                        ) : (<div className="avatar-placeholder" style={{ width: 36, height: 36, boxShadow: isAvoid ? AVOID.avatarRing : undefined }}>{initials(c.primary_username)}</div>)}
+                          <PhotoHover src={c.profile_picture}>
+                            <motion.img
+                              whileHover={{ scale: 1.25 }}
+                              src={c.profile_picture}
+                              alt=""
+                              className="avatar"
+                              style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: '50%', boxShadow: isAvoid ? AVOID.avatarRing : undefined }}
+                            />
+                          </PhotoHover>
+                        ) : (
+                          <div className="avatar-placeholder" style={{ width: 36, height: 36, boxShadow: isAvoid ? AVOID.avatarRing : undefined }}>
+                            {initials(c.primary_username)}
+                          </div>
+                        )}
                         <div>
                           <div style={{ fontWeight: 600, color: isAvoid ? AVOID.username : undefined, textShadow: isAvoid ? AVOID.usernameShadow : undefined }}>{c.primary_username}</div>
                           {historyHit && <div style={{ fontSize: '0.7rem', color: 'var(--accent)', fontStyle: 'italic', opacity: 0.85 }}>formerly {historyHit}</div>}

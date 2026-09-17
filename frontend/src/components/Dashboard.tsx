@@ -1,5 +1,7 @@
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
+import ReactDOM from 'react-dom';
 import { Link } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   getContacts,
   getRecentConversations,
@@ -25,6 +27,76 @@ const INTERESTS = [
   { key: 'interest_groups', label: 'Groups' },
   { key: 'interest_threeways', label: 'Threeways' },
 ];
+
+// Reusable Massive Photo Portal Zoom Component
+const PhotoHover: React.FC<{ src: string; children: React.ReactNode }> = ({ src, children }) => {
+  const [show, setShow] = useState(false);
+  const [coords, setCoords] = useState({ top: 0, left: 0 });
+  const ref = useRef<HTMLDivElement>(null);
+
+  const handleEnter = () => {
+    if (!ref.current) return;
+    const rect = ref.current.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const pw = 280; // Much larger width
+    const ph = 280; // Much larger height
+
+    let left = rect.left + rect.width / 2 - pw / 2;
+    if (left < 10) left = 10;
+    if (left + pw > vw - 10) left = vw - pw - 10;
+
+    let top = rect.top > ph + 20 ? rect.top - ph - 10 : rect.bottom + 10;
+    if (top < 10) top = 10;
+    if (top + ph > vh - 10) top = vh - ph - 10;
+
+    setCoords({ top, left });
+    setShow(true);
+  };
+
+  return (
+    <div
+      ref={ref}
+      style={{ display: 'inline-flex', flexShrink: 0, cursor: 'pointer', overflow: 'visible' }}
+      onMouseEnter={handleEnter}
+      onMouseLeave={() => setShow(false)}
+    >
+      {children}
+      {show &&
+        ReactDOM.createPortal(
+          <AnimatePresence>
+            <motion.div
+              initial={{ scale: 0.3, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.3, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 350, damping: 22 }}
+              onClick={e => e.stopPropagation()}
+              onMouseDown={e => e.stopPropagation()}
+              style={{
+                position: 'fixed',
+                top: coords.top,
+                left: coords.left,
+                zIndex: 99999,
+                padding: 8,
+                background: 'var(--card-bg, #1a1a2e)',
+                borderRadius: 20,
+                border: '2px solid rgba(255,255,255,0.25)',
+                boxShadow: '0 25px 60px rgba(0,0,0,0.95), 0 0 30px rgba(255,255,255,0.15)',
+                pointerEvents: 'none',
+              }}
+            >
+              <img
+                src={src}
+                alt=""
+                style={{ width: 280, height: 280, objectFit: 'cover', borderRadius: 14, display: 'block' }}
+              />
+            </motion.div>
+          </AnimatePresence>,
+          document.body
+        )}
+    </div>
+  );
+};
 
 const Dashboard: React.FC = () => {
   const [favorites, setFavorites] = useState<any[]>([]);
@@ -243,7 +315,7 @@ const Dashboard: React.FC = () => {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 28, overflow: 'visible' }}>
 
       {/* ===== RESET EMAIL MODAL ===== */}
       {showResetModal && (
@@ -595,77 +667,100 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* ===== SEARCH RESULTS ===== */}
-      {search && (
-        <div className="card">
-          <div className="section-title">
-            Search Results ({filtered.length})
-          </div>
-
-          {filtered.length === 0 ? (
-            <div style={{ color: 'var(--text-muted)', padding: 18 }}>
-              No contacts match your search.
+      <AnimatePresence>
+        {search && (
+          <motion.div
+            initial={{ opacity: 0, y: -15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            transition={{ duration: 0.25 }}
+            className="card"
+            style={{ overflow: 'visible' }}
+          >
+            <div className="section-title">
+              Search Results ({filtered.length})
             </div>
-          ) : (
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))',
-              gap: 12,
-            }}>
-              {filtered.map(c => (
-                <Link
-                  key={c.id}
-                  to={`/contacts/${c.id}`}
-                  className="card"
-                  style={{
-                    textDecoration: 'none',
-                    textAlign: 'center',
-                    padding: 14,
-                    color: 'inherit',
-                  }}
-                >
-                  {c.profile_picture ? (
-                    <img
-                      src={c.profile_picture}
-                      alt=""
-                      className="avatar"
+
+            {filtered.length === 0 ? (
+              <div style={{ color: 'var(--text-muted)', padding: 18 }}>
+                No contacts match your search.
+              </div>
+            ) : (
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))',
+                gap: 12,
+                overflow: 'visible'
+              }}>
+                {filtered.map(c => (
+                  <motion.div
+                    key={c.id}
+                    whileHover={{ scale: 1.05, zIndex: 10 }}
+                    transition={{ type: 'spring', stiffness: 350, damping: 20 }}
+                  >
+                    <Link
+                      to={`/contacts/${c.id}`}
+                      className="card"
                       style={{
-                        margin: '0 auto 10px',
-                        width: 56,
-                        height: 56,
+                        textDecoration: 'none',
+                        textAlign: 'center',
+                        padding: 14,
+                        color: 'inherit',
                         display: 'block',
-                        objectFit: 'cover',
-                      }}
-                    />
-                  ) : (
-                    <div
-                      className="avatar-placeholder"
-                      style={{
-                        margin: '0 auto 10px',
-                        width: 56,
-                        height: 56,
-                        fontSize: '1.2rem',
+                        overflow: 'visible'
                       }}
                     >
-                      {(c.primary_username || '?').charAt(0).toUpperCase()}
-                    </div>
-                  )}
-                  <div style={{ fontWeight: 800, fontSize: '0.9rem' }}>
-                    {c.primary_username}
-                  </div>
-                  {c.real_name && (
-                    <div style={{
-                      color: 'var(--text-muted)',
-                      fontSize: '0.78rem',
-                    }}>
-                      {c.real_name}
-                    </div>
-                  )}
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+                      {c.profile_picture ? (
+                        <PhotoHover src={c.profile_picture}>
+                          <motion.img
+                            whileHover={{ scale: 1.15 }}
+                            src={c.profile_picture}
+                            alt=""
+                            className="avatar"
+                            style={{
+                              margin: '0 auto 10px',
+                              width: 56,
+                              height: 56,
+                              display: 'block',
+                              objectFit: 'cover',
+                              position: 'relative',
+                              zIndex: 2,
+                              borderRadius: '50%'
+                            }}
+                          />
+                        </PhotoHover>
+                      ) : (
+                        <div
+                          className="avatar-placeholder"
+                          style={{
+                            margin: '0 auto 10px',
+                            width: 56,
+                            height: 56,
+                            fontSize: '1.2rem',
+                          }}
+                        >
+                          {(c.primary_username || '?').charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      <div style={{ fontWeight: 800, fontSize: '0.9rem' }}>
+                        {c.primary_username}
+                      </div>
+                      {c.real_name && (
+                        <div style={{
+                          color: 'var(--text-muted)',
+                          fontSize: '0.78rem',
+                        }}>
+                          {c.real_name}
+                        </div>
+                      )}
+                    </Link>
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ===== STAT CARDS ===== */}
       <div style={{
@@ -745,58 +840,82 @@ const Dashboard: React.FC = () => {
 
       {/* ===== FAVORITE CONTACTS ===== */}
       {favorites.length > 0 && (
-        <div className="card">
+        <div className="card" style={{ overflow: 'visible' }}>
           <div className="section-title">⭐ Favorites</div>
           <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fill, minmax(155px, 1fr))',
             gap: 14,
+            overflow: 'visible'
           }}>
             {favorites.slice(0, 12).map(c => (
-              <Link
+              <motion.div
                 key={c.id}
-                to={`/contacts/${c.id}`}
-                style={{
-                  textDecoration: 'none',
-                  textAlign: 'center',
-                  color: 'inherit',
-                  padding: 12,
-                  borderRadius: 14,
-                  background: 'rgba(255,255,255,0.04)',
-                  border: '1px solid rgba(255,255,255,0.08)',
-                }}
+                initial={{ opacity: 0, scale: 0.9 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true }}
+                whileHover={{ scale: 1.12, y: -5, zIndex: 30 }}
+                transition={{ type: "spring", stiffness: 350, damping: 20 }}
+                style={{ position: 'relative', overflow: 'visible' }}
               >
-                {c.profile_picture ? (
-                  <img
-                    src={c.profile_picture}
-                    alt=""
-                    className="avatar"
-                    style={{ width: 60, height: 60, margin: '0 auto 10px', display: 'block', objectFit: 'cover' }}
-                  />
-                ) : (
-                  <div
-                    className="avatar-placeholder"
-                    style={{ margin: '0 auto 10px', width: 60, height: 60, fontSize: '1.4rem' }}
-                  >
-                    {(c.primary_username || '?').charAt(0).toUpperCase()}
+                <Link
+                  to={`/contacts/${c.id}`}
+                  style={{
+                    textDecoration: 'none',
+                    textAlign: 'center',
+                    color: 'inherit',
+                    padding: 12,
+                    borderRadius: 14,
+                    background: 'rgba(255,255,255,0.04)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    display: 'block',
+                    overflow: 'visible'
+                  }}
+                >
+                  {c.profile_picture ? (
+                    <PhotoHover src={c.profile_picture}>
+                      <motion.img
+                        whileHover={{ scale: 1.15 }}
+                        transition={{ type: "spring", stiffness: 300, damping: 15 }}
+                        src={c.profile_picture}
+                        alt=""
+                        className="avatar"
+                        style={{ 
+                          width: 60, 
+                          height: 60, 
+                          margin: '0 auto 10px', 
+                          display: 'block', 
+                          objectFit: 'cover',
+                          borderRadius: '50%',
+                          position: 'relative'
+                        }}
+                      />
+                    </PhotoHover>
+                  ) : (
+                    <div
+                      className="avatar-placeholder"
+                      style={{ margin: '0 auto 10px', width: 60, height: 60, fontSize: '1.4rem' }}
+                    >
+                      {(c.primary_username || '?').charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <div style={{ fontWeight: 800, fontSize: '0.9rem' }}>
+                    {c.primary_username}
                   </div>
-                )}
-                <div style={{ fontWeight: 800, fontSize: '0.9rem' }}>
-                  {c.primary_username}
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'center', gap: 4, marginTop: 6, flexWrap: 'wrap' }}>
-                  {c.flag_hot === 1 && <span className="flag flag-hot">🔥</span>}
-                  {c.flag_twisted === 1 && <span className="flag flag-twisted">🌀</span>}
-                  {c.flag_avoid === 1 && <span className="flag flag-avoid">🚫</span>}
-                </div>
-              </Link>
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: 4, marginTop: 6, flexWrap: 'wrap' }}>
+                    {c.flag_hot === 1 && <span className="flag flag-hot">🔥</span>}
+                    {c.flag_twisted === 1 && <span className="flag flag-twisted">🌀</span>}
+                    {c.flag_avoid === 1 && <span className="flag flag-avoid">🚫</span>}
+                  </div>
+                </Link>
+              </motion.div>
             ))}
           </div>
         </div>
       )}
 
       {/* ===== RECENT CONVERSATIONS ===== */}
-      <div className="card">
+      <div className="card" style={{ overflow: 'visible' }}>
         <div style={{
           display: 'flex',
           justifyContent: 'space-between',
@@ -818,10 +937,14 @@ const Dashboard: React.FC = () => {
             No communications yet. Start by adding a contact!
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, overflow: 'visible' }}>
             {recent.slice(0, 8).map(conv => (
-              <div
+              <motion.div
                 key={conv.id}
+                initial={{ opacity: 0, x: -10 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.2 }}
                 style={{
                   padding: 14,
                   borderRadius: 14,
@@ -832,6 +955,7 @@ const Dashboard: React.FC = () => {
                   gap: 14,
                   alignItems: 'center',
                   flexWrap: 'wrap',
+                  overflow: 'visible'
                 }}
               >
                 <Link
@@ -843,15 +967,20 @@ const Dashboard: React.FC = () => {
                     textDecoration: 'none',
                     color: 'inherit',
                     minWidth: 190,
+                    overflow: 'visible'
                   }}
                 >
                   {conv.profile_picture ? (
-                    <img
-                      src={conv.profile_picture}
-                      alt=""
-                      className="avatar"
-                      style={{ width: 38, height: 38, objectFit: 'cover' }}
-                    />
+                    <PhotoHover src={conv.profile_picture}>
+                      <motion.img
+                        whileHover={{ scale: 1.2, zIndex: 10 }}
+                        transition={{ type: 'spring', stiffness: 300 }}
+                        src={conv.profile_picture}
+                        alt=""
+                        className="avatar"
+                        style={{ width: 38, height: 38, objectFit: 'cover', borderRadius: '50%', position: 'relative' }}
+                      />
+                    </PhotoHover>
                   ) : (
                     <div
                       className="avatar-placeholder"
@@ -882,7 +1011,7 @@ const Dashboard: React.FC = () => {
                 >
                   Open
                 </Link>
-              </div>
+              </motion.div>
             ))}
           </div>
         )}
@@ -983,7 +1112,15 @@ const StatCard: React.FC<{
   value: number;
   accent: string;
 }> = ({ icon, label, value, accent }) => (
-  <div className="card" style={{ padding: 18 }}>
+  <motion.div 
+    initial={{ opacity: 0, y: 15 }}
+    whileInView={{ opacity: 1, y: 0 }}
+    viewport={{ once: true }}
+    whileHover={{ y: -4, scale: 1.03 }}
+    transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+    className="card" 
+    style={{ padding: 18 }}
+  >
     <div style={{
       display: 'flex',
       alignItems: 'center',
@@ -1012,7 +1149,7 @@ const StatCard: React.FC<{
         {icon}
       </div>
     </div>
-  </div>
+  </motion.div>
 );
 
 const MiniBar: React.FC<{
